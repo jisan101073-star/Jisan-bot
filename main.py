@@ -21,7 +21,6 @@ def run_server():
     port = int(os.environ.get("PORT", 8080))
     app_flask.run(host='0.0.0.0', port=port)
 
-# Environment theke session strings gulo collect korar function
 def get_sessions():
     sessions = []
     for i in range(1, 50):
@@ -30,7 +29,6 @@ def get_sessions():
             sessions.append(session)
     return sessions
 
-# View baranor main logic
 async def view_post(client, chat_id, message_id):
     try:
         await client.get_messages(chat_id, message_id)
@@ -39,10 +37,8 @@ async def view_post(client, chat_id, message_id):
         logger.error(f"Error viewing message: {e}")
         return False
 
-# Command handlers ebong essential features
 def setup_handlers(app, sessions_clients):
     
-    # 1. /start - Main Menu & Welcome Message
     @app.on_message(filters.command("start") & filters.private)
     async def handle_start(client, message):
         username = message.from_user.username or "User"
@@ -62,7 +58,6 @@ def setup_handlers(app, sessions_clients):
         )
         await message.reply(welcome_text)
 
-    # 2. /stats - Dashboard & Account Status
     @app.on_message(filters.command("stats") & filters.private)
     async def handle_stats(client, message):
         total_accounts = len(sessions_clients)
@@ -76,7 +71,6 @@ def setup_handlers(app, sessions_clients):
         )
         await message.reply(stats_text)
 
-    # 3. /view - Create Order / Boost Views
     @app.on_message(filters.command("view") & filters.private)
     async def handle_view_command(client, message):
         args = message.text.split()
@@ -123,31 +117,8 @@ def setup_handlers(app, sessions_clients):
         except Exception as e:
             await message.reply(f"❌ Kono somossa hoisilo: `{str(e)}`")
 
-async def start_userbot(session_string, sessions_clients, is_main=False):
-    try:
-        api_id = int(os.environ.get("API_ID", 0))
-        api_hash = os.environ.get("API_HASH", "")
-        
-        app = Client(
-            name=f"session_{random.randint(1000,9999)}",
-            api_id=api_id,
-            api_hash=api_hash,
-            session_string=session_string,
-            in_memory=True
-        )
-        
-        await app.start()
-        sessions_clients.append(app)
-        logger.info("A Pyrogram session started successfully.")
-        
-        if is_main:
-            setup_handlers(app, sessions_clients)
-            logger.info("Main control bot handler loaded.")
-            
-    except Exception as e:
-        logger.error(f"Failed to start session: {e}")
-
 async def main():
+    # Background-e Flask server run korano
     Thread(target=run_server, daemon=True).start()
     
     sessions = get_sessions()
@@ -157,18 +128,50 @@ async def main():
 
     sessions_clients = []
     
-    tasks = []
-    for index, session in enumerate(sessions):
-        is_main = (index == 0) # Prothom session-ti diye command control hobe
-        tasks.append(start_userbot(session, sessions_clients, is_main))
+    # Prothom session-ti diye main client toiri korbo jar modhe handlers thakbe
+    api_id = int(os.environ.get("API_ID", 0))
+    api_hash = os.environ.get("API_HASH", "")
     
-    await asyncio.gather(*tasks)
+    # Main Client (Handlers soho)
+    main_app = Client(
+        name="main_session",
+        api_id=api_id,
+        api_hash=api_hash,
+        session_string=sessions[0],
+        in_memory=True
+    )
+    
+    await main_app.start()
+    sessions_clients.append(main_app)
+    setup_handlers(main_app, sessions_clients)
+    logger.info("Main Pyrogram session started with handlers.")
+
+    # Jodi ekadhik session thake, baki gulo start korbo
+    for session in sessions[1:]:
+        try:
+            app = Client(
+                name=f"session_{random.randint(1000,9999)}",
+                api_id=api_id,
+                api_hash=api_hash,
+                session_string=session,
+                in_memory=True
+            )
+            await app.start()
+            sessions_clients.append(app)
+            logger.info("An extra Pyrogram session started successfully.")
+        except Exception as e:
+            logger.error(f"Failed to start extra session: {e}")
+
     logger.info("All view bot sessions are running successfully!")
     
+    # Event loop ke alive rakhar jonno
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
     try:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(main())
+    except RuntimeError:
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
         logger.info("Bot stopped gracefully.")
