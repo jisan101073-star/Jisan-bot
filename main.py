@@ -128,7 +128,6 @@ async def main():
 
     sessions_clients = []
     
-    # Prothom session-ti diye main client toiri korbo jar modhe handlers thakbe
     api_id = int(os.environ.get("API_ID", 0))
     api_hash = os.environ.get("API_HASH", "")
     
@@ -146,7 +145,7 @@ async def main():
     setup_handlers(main_app, sessions_clients)
     logger.info("Main Pyrogram session started with handlers.")
 
-    # Jodi ekadhik session thake, baki gulo start korbo
+    # Baki session gulo start korbo
     for session in sessions[1:]:
         try:
             app = Client(
@@ -163,15 +162,13 @@ async def main():
             logger.error(f"Failed to start extra session: {e}")
 
     logger.info("All view bot sessions are running successfully!")
-    
-    # Event loop ke alive rakhar jonno
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
+    # Explicit Event Loop set korlam jate Render-er Python 3.14 e kono error na ase
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         loop.run_until_complete(main())
-    except RuntimeError:
-        asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
         logger.info("Bot stopped gracefully.")
