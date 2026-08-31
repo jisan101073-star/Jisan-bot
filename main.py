@@ -5,6 +5,7 @@ import asyncio
 from threading import Thread
 from flask import Flask
 from telethon import TelegramClient, events
+from telethon.sessions import StringSession
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -43,10 +44,10 @@ async def main():
     
     clients = []
     
-    # Prothom session diye main client (handlers soho) toiri hobe
+    # StringSession use kore main client start kora
     print("Starting main session...")
-    main_client = TelegramClient(None, api_id, api_hash)
-    await main_client.start(session=sessions[0])
+    main_client = TelegramClient(StringSession(sessions[0]), api_id, api_hash)
+    await main_client.start()
     clients.append(main_client)
     
     # 1. /start Handler
@@ -112,7 +113,6 @@ async def main():
             requested_amount = int(args[2])
 
         try:
-            # Telethon diye link parse kora
             if "/c/" in link:
                 parts = link.split("/")
                 chat_id = int("-100" + parts[-2])
@@ -129,7 +129,6 @@ async def main():
 
             await event.respond(f"🚀 **{use_count}** ti account theke view pathano shuru hocche...")
             
-            # View baranor jonno message fetch ba reaction kora
             success_count = 0
             for i in range(use_count):
                 client = clients[i]
@@ -149,15 +148,13 @@ async def main():
     for idx, session in enumerate(sessions[1:], start=2):
         try:
             print(f"Starting extra session {idx}...")
-            extra_client = TelegramClient(None, api_id, api_hash)
-            await extra_client.start(session=session)
+            extra_client = TelegramClient(StringSession(session), api_id, api_hash)
+            await extra_client.start()
             clients.append(extra_client)
         except Exception as e:
             logger.error(f"Failed to start session {idx}: {e}")
 
     logger.info("All Telethon view bot sessions are running successfully!")
-    
-    # Run until disconnected
     await main_client.run_until_disconnected()
 
 if __name__ == "__main__":
