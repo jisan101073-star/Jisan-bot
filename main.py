@@ -118,7 +118,6 @@ def setup_handlers(app, sessions_clients):
             await message.reply(f"❌ Kono somossa hoisilo: `{str(e)}`")
 
 async def main():
-    # Background-e Flask server run korano
     Thread(target=run_server, daemon=True).start()
     
     sessions = get_sessions()
@@ -131,7 +130,6 @@ async def main():
     api_id = int(os.environ.get("API_ID", 0))
     api_hash = os.environ.get("API_HASH", "")
     
-    # Main Client (Handlers soho)
     main_app = Client(
         name="main_session",
         api_id=api_id,
@@ -145,7 +143,6 @@ async def main():
     setup_handlers(main_app, sessions_clients)
     logger.info("Main Pyrogram session started with handlers.")
 
-    # Baki session gulo start korbo
     for session in sessions[1:]:
         try:
             app = Client(
@@ -162,117 +159,10 @@ async def main():
             logger.error(f"Failed to start extra session: {e}")
 
     logger.info("All view bot sessions are running successfully!")
-    
-    # Infinite idle loop taike alive rakhar jonno
     await asyncio.Future()
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        logger.info("Bot stopped gracefully.")
-            "╰━━━━━━━━━━━━━━━━━━━━━━╯"
-        )
-        await message.reply(stats_text)
-
-    @app.on_message(filters.command("view") & filters.private)
-    async def handle_view_command(client, message):
-        args = message.text.split()
-        if len(args) < 2:
-            await message.reply(
-                "❌ **Bhul command!** Sothik niyome use korun:\n\n"
-                "📌 **Format:** `/view [Post_Link] [Amount]`\n"
-                "📌 **Example:** `/view https://t.me/channelname/123 10`"
-            )
-            return
-        
-        link = args[1]
-        if "t.me/" not in link:
-            await message.reply("⚠️ Sothik Telegram post link din!")
-            return
-        
-        requested_amount = None
-        if len(args) >= 3 and args[2].isdigit():
-            requested_amount = int(args[2])
-
-        try:
-            parts = link.split("/")
-            chat_id = parts[-2]
-            message_id = int(parts[-1])
-            
-            total_available = len(sessions_clients)
-            use_count = total_available
-            if requested_amount and requested_amount < total_available:
-                use_count = requested_amount
-
-            await message.reply(f"🚀 **{use_count}** ti account theke view pathano shuru hocche...")
-            
-            tasks = []
-            for i in range(use_count):
-                sess_client = sessions_clients[i]
-                await asyncio.sleep(random.uniform(0.1, 0.3))
-                tasks.append(view_post(sess_client, chat_id, message_id))
-            
-            results = await asyncio.gather(*tasks)
-            success_count = sum(1 for r in results if r)
-            
-            await message.reply(f"✅ **Success!** Total `{success_count}` ta view sothikbhave add kora hoiche.")
-            
-        except Exception as e:
-            await message.reply(f"❌ Kono somossa hoisilo: `{str(e)}`")
-
-async def main():
-    # Background-e Flask server run korano
-    Thread(target=run_server, daemon=True).start()
-    
-    sessions = get_sessions()
-    if not sessions:
-        logger.warning("Kono SESSION_STRING pawa jayni environment variable-e!")
-        return
-
-    sessions_clients = []
-    
-    api_id = int(os.environ.get("API_ID", 0))
-    api_hash = os.environ.get("API_HASH", "")
-    
-    # Main Client (Handlers soho)
-    main_app = Client(
-        name="main_session",
-        api_id=api_id,
-        api_hash=api_hash,
-        session_string=sessions[0],
-        in_memory=True
-    )
-    
-    await main_app.start()
-    sessions_clients.append(main_app)
-    setup_handlers(main_app, sessions_clients)
-    logger.info("Main Pyrogram session started with handlers.")
-
-    # Baki session gulo start korbo
-    for session in sessions[1:]:
-        try:
-            app = Client(
-                name=f"session_{random.randint(1000,9999)}",
-                api_id=api_id,
-                api_hash=api_hash,
-                session_string=session,
-                in_memory=True
-            )
-            await app.start()
-            sessions_clients.append(app)
-            logger.info("An extra Pyrogram session started successfully.")
-        except Exception as e:
-            logger.error(f"Failed to start extra session: {e}")
-
-    logger.info("All view bot sessions are running successfully!")
-    await asyncio.Event().wait()
-
-if __name__ == "__main__":
-    # Explicit Event Loop set korlam jate Render-er Python 3.14 e kono error na ase
-    try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(main())
     except (KeyboardInterrupt, SystemExit):
         logger.info("Bot stopped gracefully.")
